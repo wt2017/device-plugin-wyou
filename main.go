@@ -16,6 +16,7 @@ import (
 
 const (
 	resourceName = "wyou/ptp"
+	sockDir = "/var/lib/kubelet/plugins_registry"
 	socketName   = "wyou-ptp.sock"
 	devicePath   = "/dev/ptp0"
 )
@@ -37,7 +38,7 @@ func NewMyCharDevicePlugin() *MyCharDevicePlugin {
 	return &MyCharDevicePlugin{
 		devices: []*pluginapi.Device{
 			{
-				ID:     "dev_ptp_0",
+				ID:     "ptp_id_0",
 				Health: pluginapi.Healthy,
 			},
 		},
@@ -47,14 +48,8 @@ func NewMyCharDevicePlugin() *MyCharDevicePlugin {
 
 // Start starts the gRPC server and registers the device plugin with the kubelet.
 func (m *MyCharDevicePlugin) Start() error {
-    // Ensure the directory exists
-    socketDir := pluginapi.DevicePluginPath
-    if err := os.MkdirAll(socketDir, 0755); err != nil {
-        return fmt.Errorf("failed to create socket directory: %v", err)
-    }
-
     // Create the socket file
-    m.socketPath = path.Join(pluginapi.DevicePluginPath, socketName)
+    m.socketPath = path.Join(sockDir, socketName)
 	log.Printf("Socket path: %s", m.socketPath)
     if err := os.Remove(m.socketPath); err != nil && !os.IsNotExist(err) {
         return fmt.Errorf("failed to remove existing socket: %v", err)
@@ -98,6 +93,7 @@ func (m *MyCharDevicePlugin) Stop() {
 }
 
 func (m *MyCharDevicePlugin) GetInfo(ctx context.Context, rqt *registerapi.InfoRequest) (*registerapi.PluginInfo, error) {
+	log.Println("GetInfo is invoked\n")
 	pluginInfoResponse := &registerapi.PluginInfo{
 		Type:              registerapi.DevicePlugin,
 		Name:              resourceName,
@@ -120,6 +116,7 @@ func (m *MyCharDevicePlugin) NotifyRegistrationStatus(ctx context.Context,
 
 // ListAndWatch streams the list of devices to the kubelet.
 func (m *MyCharDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.DevicePlugin_ListAndWatchServer) error {
+	log.Println("ListAndWatch is invoked\n")
 	for {
 		select {
 		case <-m.stop:
@@ -150,17 +147,21 @@ func (m *MyCharDevicePlugin) Allocate(ctx context.Context, req *pluginapi.Alloca
 }
 
 // GetDevicePluginOptions returns options for the device plugin.
-func (m *MyCharDevicePlugin) GetDevicePluginOptions(ctx context.Context, e *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
-	return &pluginapi.DevicePluginOptions{}, nil
+func (m *MyCharDevicePlugin) GetDevicePluginOptions(ctx context.Context, empty *pluginapi.Empty) (*pluginapi.DevicePluginOptions, error) {
+	return &pluginapi.DevicePluginOptions{
+		PreStartRequired: false,
+	}, nil
 }
 
-func (m *MyCharDevicePlugin) GetPreferredAllocation(ctx context.Context, req *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
-    // Implement this method
-    return &pluginapi.PreferredAllocationResponse{}, nil
+func (m *MyCharDevicePlugin) GetPreferredAllocation(ctx context.Context, par *pluginapi.PreferredAllocationRequest) (*pluginapi.PreferredAllocationResponse, error) {
+	log.Println("GetPreferredAllocation() called with %+v", par)
+	resp := new(pluginapi.PreferredAllocationResponse)
+	return resp, nil
 }
 
-// PreStartContainer is called before the container is started.
-func (m *MyCharDevicePlugin) PreStartContainer(ctx context.Context, req *pluginapi.PreStartContainerRequest) (*pluginapi.PreStartContainerResponse, error) {
+func (m *MyCharDevicePlugin) PreStartContainer(ctx context.Context,
+	psRqt *pluginapi.PreStartContainerRequest,
+) (*pluginapi.PreStartContainerResponse, error) {
 	return &pluginapi.PreStartContainerResponse{}, nil
 }
 
