@@ -18,7 +18,7 @@ const (
 	resourceName = "wyou/mrvl-ptp"
 	sockDir = "/var/lib/kubelet/plugins_registry"
 	socketName   = "wyou-mrvl-ptp.sock"
-	devicePath   = "/dev/mrvl-ptp0"
+	devicePath   = "/dev/mrvl_ptp0"
 )
 
 const (
